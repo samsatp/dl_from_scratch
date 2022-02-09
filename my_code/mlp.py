@@ -43,7 +43,10 @@ class mlp:
             if i < self.n_layers-1:
                 output = tf.nn.relu(output @ W + b)
             else:
-                output = self.last_activation( output @ W + b )
+                if self.last_activation == 'relu':
+                    output = tf.nn.relu( output @ W + b )
+                elif self.last_activation == 'sigmoid':
+                    output = tf.nn.sigmoid( output @ W + b )
         return output
 
     @property
@@ -75,7 +78,7 @@ class mlp:
 if __name__ == '__main__':
 
     n_hiddens = [64, 64, 1]
-    last_activation = None
+    last_activation = 'relu'
     loss_fn = tf.keras.losses.MeanSquaredError()
     optimizer = tf.keras.optimizers.Adam()
 

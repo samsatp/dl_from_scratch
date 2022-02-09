@@ -2,6 +2,7 @@ import tensorflow as tf
 from typing import List, Union
 from abc import ABC, abstractmethod
 
+############## INTERFACES ##############
 class Encoder(tf.keras.layers.Layer, ABC):
 
     @abstractmethod
@@ -47,6 +48,7 @@ class EncoderDecoder(tf.keras.Model, ABC):
     def train(self, data_iter, epochs, **kwargs):
         raise NotImplementedError
 
+#############################################
 
 class seq2seq_Encoder(Encoder):
     def __init__(self, n_layers, n_hiddens, emb_dims, vocab_size, dropout=0.0, **kwargs) -> None:
