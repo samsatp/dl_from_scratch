@@ -1,6 +1,7 @@
 import tensorflow as tf
 from typing import List, Union
 from abc import ABC, abstractmethod
+import utils
 
 ############## INTERFACES ##############
 class Encoder(tf.keras.layers.Layer, ABC):
@@ -41,7 +42,7 @@ class EncoderDecoder(tf.keras.Model, ABC):
         return self.decoder(dec_X, dec_state)
 
     @abstractmethod
-    def predict(self, enc_X, num_steps, src_vocab, tgt_vocab):
+    def predict(self, src_sentence, num_steps, src_vocab, tgt_vocab):
         raise NotImplementedError
 
     @abstractmethod
@@ -98,7 +99,6 @@ class seq2seq_Decoder(Decoder):
         # X: (, timesteps) & states: (, enc_layers, enc_n_hiddens)
 
         X = self.embedding(X) # (, timesteps, emb_dims)
-
         context = states[-1]  # (, enc_n_hiddens)
         context = tf.expand_dims(context, axis=1)                   # (, 1, enc_n_hiddens)
         context = tf.repeat(context, repeats=X.shape[1], axis=1)    # (, timesteps, enc_n_hiddens)
@@ -110,6 +110,40 @@ class seq2seq_Decoder(Decoder):
 
         return output, states
         
+class seq2seq(EncoderDecoder):
+    def __init__(self, encoder, decoder, **kwargs) -> None:
+        super().__init__(encoder, decoder, **kwargs)
+
+    def predict(self, 
+        src_sentence: List[List[str]],  # [['t', 'i', 'm']]
+        num_steps: int, 
+        src_vocab: utils.Vocab, 
+        tgt_vocab: utils.Vocab
+    ) -> str:
+
+        enc_X = tf.constant(src_vocab[src_sentence])   # enc_X: [[5, 3, 13]]        
+        dec_X = tf.constant(tgt_vocab[ [['<bos>']] ])  # dec: [[99]]
+        
+        _, states = self.encoder(enc_X)
+
+        output_indices = ''.join(src_sentence[0])
+        eos_index = tgt_vocab['<eos>']
+        for _ in range(num_steps):
+            Y_pred, states = self.decoder(dec_X, states)
+            Y_pred = tf.argmax(Y_pred, axis=-1)            # predicted index
+            dec_X = Y_pred
+
+            Y_pred = tf.reshape(Y_pred, shape=()).numpy()
+            if Y_pred == eos_index: break
+            Y_pred = tgt_vocab.to_tokens( int(Y_pred) )    # convert index to token
+            output_indices += Y_pred
+
+
+        return output_indices
+
+    def train(self, data_iter, epochs, **kwargs):
+        return 
+
 
 def sequence_mask(X, valid_len):
     if valid_len is None: return X
@@ -147,15 +181,20 @@ if __name__ == '__main__':
     print(query)
 
     if query == 'enc_dec':
-        X = tf.zeros((4, 7))
-        encoder = seq2seq_Encoder(vocab_size=10, emb_dims=8, n_hiddens=16, n_layers=2)
-        decoder = seq2seq_Decoder(vocab_size=10, emb_dims=8, n_hiddens=16, n_layers=2)
+        print('='*20)
+        # Get data
+        lines  = utils.get_time_machine_dataset()
+        tokens = utils.tokenize(lines, token='char')
+        vocab  = utils.Vocab(tokens)
 
-        seq, states = encoder(X)
-        dec_seq, dec_states = decoder(X, states, training=False)
-        print(dec_seq.shape)
-        print(len(dec_states))
-        print(dec_states[0].shape)
+        # Model
+        encoder = seq2seq_Encoder(vocab_size=len(vocab), emb_dims=64, n_hiddens=16, n_layers=2)
+        decoder = seq2seq_Decoder(vocab_size=len(vocab), emb_dims=64, n_hiddens=16, n_layers=2)
+        model = seq2seq(encoder, decoder)
+
+        # Prediction
+        outputs = model.predict(utils.tokenize(["time traveller "]), 20, vocab, vocab)
+        print(outputs)
     
     elif query == 'mask_seq':
         X = tf.constant([[1, 2, 3], [4, 5, 6]])
@@ -163,6 +202,9 @@ if __name__ == '__main__':
 
     elif query == 'masked_loss':
         loss = MaskedSoftmaxCELoss(tf.constant([4, 2, 0]))
-        print(loss(tf.ones((3,4), dtype = tf.int32), tf.ones((3, 4, 10))).numpy())
+        y_true = tf.ones((3,4))
+        y_pred = tf.ones((3, 4, 10))
+
+        print(loss(y_true, y_pred).numpy())
 
 
