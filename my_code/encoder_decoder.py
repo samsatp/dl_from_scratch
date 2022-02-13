@@ -120,6 +120,9 @@ class seq2seq(EncoderDecoder):
         src_vocab: utils.Vocab, 
         tgt_vocab: utils.Vocab
     ) -> str:
+        '''
+            Predict a string (not a batch of string)
+        '''
 
         enc_X = tf.constant(src_vocab[src_sentence])   # enc_X: [[5, 3, 13]]        
         dec_X = tf.constant(tgt_vocab[ [['<bos>']] ])  # dec: [[99]]
