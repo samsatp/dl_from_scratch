@@ -6,7 +6,7 @@ class Additive_attn(tf.keras.layers.Layer):
         attention_weights = softmax(a(q, k))  ;a is a scoring function
         a(q,k) = Wv tanh( Wq (q) + Wk (k) ) ∈ ℝ
 
-        attention_pooling_output = a(q, k) @ V
+        attention_pooling_output = attention_weights @ V
 
         query: 𝐪∈ℝ𝑞, key: 𝐤∈ℝ𝑘
         trainables: 𝐖𝑞∈ℝℎ×𝑞 , 𝐖𝑘∈ℝℎ×𝑘, and 𝐰𝑣∈ℝℎ.
